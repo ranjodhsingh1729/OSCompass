@@ -11,6 +11,8 @@ export default function Landing(props) {
   const [repoSuggestions, setRepoSuggestions] = useState([]);
   const [ownerFocused, setOwnerFocused] = useState(false);
   const [repoFocused, setRepoFocused] = useState(false);
+  const [selectedOwnerSuggestionIndex, setSelectedOwnerSuggestionIndex] = useState(-1);
+  const [selectedRepoSuggestionIndex, setSelectedRepoSuggestionIndex] = useState(-1);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -23,6 +25,7 @@ export default function Landing(props) {
       setOwnerSuggestions([]);
       return;
     }
+    setSelectedOwnerSuggestionIndex(-1);
     const debounce = setTimeout(async () => {
       const users = await Suggestions.searchUsers(ownerQuery);
       setOwnerSuggestions(users);
@@ -36,6 +39,7 @@ export default function Landing(props) {
       setRepoSuggestions([]);
       return;
     }
+    setSelectedRepoSuggestionIndex(-1);
     const debounce = setTimeout(async () => {
       const repos = await Suggestions.searchRepos(
         ownerRef.current.value,
@@ -45,6 +49,54 @@ export default function Landing(props) {
     }, 400);
     return () => clearTimeout(debounce);
   }, [repoQuery]);
+
+  const handleOwnerKeyDown = (e) => {
+    if (ownerSuggestions.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedOwnerSuggestionIndex(prevIndex => (prevIndex + 1) % ownerSuggestions.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedOwnerSuggestionIndex(prevIndex => (prevIndex - 1 + ownerSuggestions.length) % ownerSuggestions.length);
+    } else if (e.key === 'Enter') {
+      if (selectedOwnerSuggestionIndex > -1) {
+        e.preventDefault();
+        const selectedUser = ownerSuggestions[selectedOwnerSuggestionIndex];
+        setOwnerQuery(selectedUser.login);
+        ownerRef.current.value = selectedUser.login;
+        setOwnerSuggestions([]);
+        setSelectedOwnerSuggestionIndex(-1);
+      }
+    } else if (e.key === 'Escape') {
+      setOwnerSuggestions([]);
+      setSelectedOwnerSuggestionIndex(-1);
+    }
+  };
+
+  const handleRepoKeyDown = (e) => {
+    if (repoSuggestions.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedRepoSuggestionIndex(prevIndex => (prevIndex + 1) % repoSuggestions.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedRepoSuggestionIndex(prevIndex => (prevIndex - 1 + repoSuggestions.length) % repoSuggestions.length);
+    } else if (e.key === 'Enter') {
+      if (selectedRepoSuggestionIndex > -1) {
+        e.preventDefault();
+        const selectedRepo = repoSuggestions[selectedRepoSuggestionIndex];
+        setRepoQuery(selectedRepo.name);
+        repoRef.current.value = selectedRepo.name;
+        setRepoSuggestions([]);
+        setSelectedRepoSuggestionIndex(-1);
+      }
+    } else if (e.key === 'Escape') {
+      setRepoSuggestions([]);
+      setSelectedRepoSuggestionIndex(-1);
+    }
+  };
 
   return (
     <div>
@@ -65,19 +117,21 @@ export default function Landing(props) {
             onChange={(e) => setOwnerQuery(e.target.value)}
             onFocus={() => setOwnerFocused(true)}
             onBlur={() => setTimeout(() => setOwnerFocused(false), 150)}
+            onKeyDown={handleOwnerKeyDown}
             autoComplete="off"
           />
           {ownerFocused && ownerSuggestions.length > 0 && (
             <ul className="absolute bg-white border mt-1 w-full rounded shadow z-10">
-              {ownerSuggestions.map((user) => (
+              {ownerSuggestions.map((user, index) => (
                 <li
                   key={user.id}
-                  onClick={() => {
+                  onMouseDown={() => {
                     setOwnerQuery(user.login);
                     ownerRef.current.value = user.login;
                     setOwnerSuggestions([]);
                   }}
-                  className="p-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
+                  onMouseOver={() => setSelectedOwnerSuggestionIndex(index)}
+                  className={`p-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2 ${index === selectedOwnerSuggestionIndex ? 'bg-gray-200' : ''}`}
                 >
                   <img
                     src={user.avatar_url}
@@ -106,19 +160,21 @@ export default function Landing(props) {
             onChange={(e) => setRepoQuery(e.target.value)}
             onFocus={() => setRepoFocused(true)}
             onBlur={() => setTimeout(() => setRepoFocused(false), 150)}
+            onKeyDown={handleRepoKeyDown}
             autoComplete="off"
           />
           {repoFocused && repoSuggestions.length > 0 && (
             <ul className="absolute bg-white border mt-1 w-full rounded shadow z-10">
-              {repoSuggestions.map((repo) => (
+              {repoSuggestions.map((repo, index) => (
                 <li
                   key={repo.id}
-                  onClick={() => {
+                  onMouseDown={() => {
                     setRepoQuery(repo.name);
                     repoRef.current.value = repo.name;
                     setRepoSuggestions([]);
                   }}
-                  className="p-2 hover:bg-gray-100 cursor-pointer"
+                  onMouseOver={() => setSelectedRepoSuggestionIndex(index)}
+                  className={`p-2 hover:bg-gray-100 cursor-pointer ${index === selectedRepoSuggestionIndex ? 'bg-gray-200' : ''}`}
                 >
                   {repo.name}
                 </li>
