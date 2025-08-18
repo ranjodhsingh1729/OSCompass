@@ -1,14 +1,11 @@
-// Base URL for the proxy server
+// Base URL for the server
 const BASE_URL = "http://localhost:3000";
 
 class GithubDataCollector {
   constructor() {
-    console.log("HI");
     this.cache = new Map();
     this.lastRequestTime = 0;
     this.RATE_LIMIT_DELAY = 3000; // 3 seconds
-    this.stats_retry_count = 0;
-    this.STATS_RETRY_DELAY = 3000; // 3 seconds
   }
 
   async rateLimitedFetch(url) {
@@ -33,40 +30,20 @@ class GithubDataCollector {
     try {
       let response = await this.rateLimitedFetch(`${BASE_URL}${endpoint}`);
 
-      // If stats are being computed (202 Accepted), wait and retry.
-      if (
-        this.stats_retry_count < 10 &&
-        response.status === 202 &&
-        endpoint.includes("/stats/")
-      ) {
-        this.stats_retry_count += 1;
-        await new Promise((resolve) =>
-          setTimeout(resolve, this.STATS_RETRY_DELAY)
-        );
-        // Corrected the typo from fetchGithub to this.rateLimitedFetch
-        response = await this.rateLimitedFetch(`${BASE_URL}${endpoint}`);
-      }
-
       if (!response.ok) {
         const errorBody = await response.text();
         console.error(
-          `HTTP error! status: ${response.status} for endpoint: ${endpoint}`,
-          errorBody
+          `HTTP error! status: ${response.status} for endpoint: ${endpoint}`
         );
+        console.error(
+          `Error Body: ${errorBody}`
+        )
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const responseClone = response.clone();
-      try {
-        const data = await response.json();
-        this.cache.set(endpoint, data);
-        return data;
-      } catch (e) {
-        const text = await responseClone.text();
-        console.error(`Failed to parse JSON for endpoint: ${endpoint}`);
-        console.error("Response text:", text);
-        return null;
-      }
+      const data = await response.json();
+      this.cache.set(endpoint, data);
+      return data;
     } catch (error) {
       console.error(`Error in fetchGitHub for ${endpoint}:`, error);
       return null;
@@ -149,7 +126,7 @@ class GithubDataCollector {
         dateExtractor: (item) => item.created_at,
       }),
       this.fetchAllPages(
-        `/repos/${owner}/${repo}/commits?since=${oneYearAgo.toISOString()}`
+        `/repos/${owner}/${repo}/commits?since=${oneYearAgo.toISOString().split('T')[0]}`
       ),
     ]);
 
@@ -252,53 +229,73 @@ class GithubDataCollector {
     };
   }
 
-  async getContributionStats(owner, repo) {
-    const stats = await this.fetchGitHub(
-      `/repos/${owner}/${repo}/stats/contributors`
+  async getContributionDistribution(owner, repo) {
+    const contributors = await this.fetchAllPages(
+      `/repos/${owner}/${repo}/contributors`
     );
 
-    if (!stats) return { "3m": [], "6m": [], "1y": [] };
-
-    if (!Array.isArray(stats)) {
-      if (typeof stats === "object" && stats.author) {
-        const contributor = {
-          contributor:
-            stats.author && stats.author.login ? stats.author.login : "",
-          contributions: typeof stats.total === "number" ? stats.total : 0,
-        };
-        return {
-          "3m": [contributor],
-          "6m": [contributor],
-          "1y": [contributor],
-        };
-      }
-      return { "3m": [], "6m": [], "1y": [] };
+    if (!contributors || !Array.isArray(contributors) || contributors.length === 0) {
+      return [];
     }
 
-    const processStats = (months) => {
-      const timeframe = new Date();
-      timeframe.setMonth(timeframe.getMonth() - months);
-      const timeframeTimestamp = Math.floor(timeframe.getTime() / 1000);
+    const contributions = contributors.map((c) => c.contributions);
 
-      return stats
-        .map((contributor) => {
-          const contributionsInFrame = contributor.weeks
-            .filter((week) => week.w >= timeframeTimestamp)
-            .reduce((acc, week) => acc + week.c, 0);
+    const bins = [
+      { range: '1', count: 0 },
+      { range: '2-5', count: 0 },
+      { range: '6-10', count: 0 },
+      { range: '11-20', count: 0 },
+      { range: '21-50', count: 0 },
+      { range: '51-100', count: 0 },
+      { range: '101+', count: 0 },
+    ];
 
-          return {
-            contributor: contributor.author ? contributor.author.login : "",
-            contributions: contributionsInFrame,
-          };
-        })
-        .filter((c) => c.contributions > 0);
-    };
+    for (const num of contributions) {
+      if (num === 1) {
+        bins[0].count++;
+      } else if (num >= 2 && num <= 5) {
+        bins[1].count++;
+      } else if (num >= 6 && num <= 10) {
+        bins[2].count++;
+      } else if (num >= 11 && num <= 20) {
+        bins[3].count++;
+      } else if (num >= 21 && num <= 50) {
+        bins[4].count++;
+      } else if (num >= 51 && num <= 100) {
+        bins[5].count++;
+      } else if (num > 100) {
+        bins[6].count++;
+      }
+    }
 
-    return {
-      "3m": processStats(3),
-      "6m": processStats(6),
-      "1y": processStats(12),
-    };
+    let lastNonEmptyIndex = -1;
+    for (let i = bins.length - 1; i >= 0; i--) {
+      if (bins[i].count > 0) {
+        lastNonEmptyIndex = i;
+        break;
+      }
+    }
+
+    if (lastNonEmptyIndex !== -1) {
+      return bins.slice(0, lastNonEmptyIndex + 1);
+    } else {
+      return [];
+    }
+  }
+
+  async getTopContributors(owner, repo) {
+    const contributors = await this.fetchAllPages(
+      `/repos/${owner}/${repo}/contributors`
+    );
+
+    if (!contributors || !Array.isArray(contributors)) {
+      return [];
+    }
+
+    return contributors.slice(0, 10).map((c) => ({
+      contributor: c.login,
+      contributions: c.contributions,
+    }));
   }
 
   async getCodeFrequency(owner, repo) {
@@ -328,9 +325,8 @@ class GithubDataCollector {
               month: "short",
               day: "numeric",
             }),
-            lines: week.additions - week.deletions,
             additions: week.additions,
-            deletions: week.deletions,
+            deletions: -Math.abs(week.deletions),
           };
         });
     };
@@ -378,14 +374,16 @@ class GithubDataCollector {
       repoInfo,
       pulseMetrics,
       healthStatus,
-      contributionStats,
+      contributionDistribution,
+      topContributors,
       codeFrequency,
       releaseInfo,
     ] = await Promise.all([
       this.getRepoInfo(owner, repo),
       this.getPulseMetrics(owner, repo),
       this.getHealthStatus(owner, repo),
-      this.getContributionStats(owner, repo),
+      this.getContributionDistribution(owner, repo),
+      this.getTopContributors(owner, repo),
       this.getCodeFrequency(owner, repo),
       this.getReleaseInfo(owner, repo),
     ]);
@@ -394,7 +392,8 @@ class GithubDataCollector {
       repoInfo,
       pulseMetrics,
       healthStatus,
-      contributionStats,
+      contributionDistribution,
+      topContributors,
       codeFrequency,
       releaseInfo,
     };

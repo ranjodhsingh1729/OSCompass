@@ -15,7 +15,7 @@ function Content(props) {
   }
 
   return (
-    <div className="grow-1 p-3 flex flex-col justify-center items-center">
+    <div className="grow p-3 flex flex-col justify-center items-center">
       {page == "Landing" && <Landing callback={letsGo} />}
       {page == "Dashboard" && <Dashboard owner={owner} repo={repo} />}
     </div>

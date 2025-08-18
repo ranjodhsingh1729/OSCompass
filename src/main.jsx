@@ -1,5 +1,5 @@
 // libraries
-import { StrictMode } from "react";
+// import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 // Files of Mine

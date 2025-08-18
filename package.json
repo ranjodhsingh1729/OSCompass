@@ -30,5 +30,8 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.11",
     "vite": "^7.1.0"
+  },
+  "overrides": {
+    "react-is": "^19.0.0-beta-935180c7e0-20240524"
   }
 }
