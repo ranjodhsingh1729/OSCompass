@@ -9,11 +9,11 @@ function Navbar(props) {
         ></img>
         <span>OSCompass</span>
       </span>
-      <span className="mx-2 flex justify-between items-center">
+      {/* <span className="mx-2 flex justify-between items-center">
         <button className="mx-1 px-3 py-1 border border-black rounded-lg hover:bg-black hover:text-white">
           Mode
         </button>
-      </span>
+      </span> */}
     </div>
   );
 }
