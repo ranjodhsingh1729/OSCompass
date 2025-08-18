@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   BarChart,
   Bar,
@@ -12,6 +12,9 @@ import {
 } from "recharts";
 
 import { Users, CircleDot, GitPullRequest, Tags } from "lucide-react";
+
+import { Loader } from "./Loader"
+import { githubCollector } from "./collector";
 
 // Dummy data for histogram of contributions
 const contributionsData = [
@@ -55,7 +58,7 @@ const Title = (props) => {
   return (
     <div className="flex justify-between items-center w-full">
       <div className="flex gap-1 flex-col">
-        <div className="text-3xl font-bold">git/git</div>
+        <div className="text-3xl font-bold">{props.title}</div>
         <div className="text-sm text-gray-600">
           Created: {props.created || "XX-XX-XXXX"}
         </div>
@@ -73,7 +76,7 @@ const Title = (props) => {
           <div className="text-sm text-gray-600">Watching</div>
           <div className="text-xl font-bold">{props.watching || "N/A"}</div>
         </div>
-        <div className="flex flex-col justify-center items-center">
+        {/* <div className="flex flex-col justify-center items-center">
           <div className="text-sm text-gray-600">Commits</div>
           <div className="text-xl font-bold">{props.watching || "N/A"}</div>
         </div>
@@ -84,15 +87,15 @@ const Title = (props) => {
         <div className="flex flex-col justify-center items-center">
           <div className="text-sm text-gray-600">Contributors</div>
           <div className="text-xl font-bold">{props.watching || "N/A"}</div>
-        </div>
+        </div> */}
       </div>
     </div>
   );
 };
 
-const Pulse = (props) => {
-  const windows = ["3M", "6M", "Year"];
-  const [window, setWindow] = useState("3M");
+const Pulse = ({ pulseMetrics, releaseInfo, timeRange}) => {
+  const [windows, window, setWindow] = timeRange;
+  pulseMetrics = pulseMetrics[window];
 
   return (
     <div className="flex flex-col justify-between items-center w-full gap-2">
@@ -121,113 +124,66 @@ const Pulse = (props) => {
         </div>
       </div>
       <div className="ml-2 flex items-center flex-wrap gap-3 w-full">
-        <MetricCard
-          icon={GitPullRequest}
-          title="New PRs"
-        >
-          N/A
+        <MetricCard icon={GitPullRequest} title="New PRs">
+          {pulseMetrics.newPRs}
         </MetricCard>
-        <MetricCard
-          icon={GitPullRequest}
-          title="Inacive PRs"
-        >
-          N/A
+        <MetricCard icon={GitPullRequest} title="Inactive PRs">
+          {pulseMetrics.inactivePRs}
         </MetricCard>
-        <MetricCard
-          icon={CircleDot}
-          title="New Issues"
-        >
-          N/A
+        <MetricCard icon={GitPullRequest} title="Closed PRs">
+          {pulseMetrics.closedPRs}
         </MetricCard>
-        <MetricCard
-          icon={CircleDot}
-          title="Inactive Issues"
-        >
-          N/A
+        <MetricCard icon={GitPullRequest} title="Merged PRs">
+          {pulseMetrics.mergedPRs}
         </MetricCard>
-        <MetricCard
-          icon={Users}
-          title="New Contributors"
-        >
-          N/A
+        <MetricCard icon={CircleDot} title="New Issues">
+          {pulseMetrics.newIssues}
         </MetricCard>
-        <MetricCard
-          icon={Users}
-          title="Inactive Contributors"
-        >
-          N/A
+        <MetricCard icon={CircleDot} title="Inactive Issues">
+          {pulseMetrics.inactiveIssues}
+        </MetricCard>
+        <MetricCard icon={CircleDot} title="Closed Issues">
+          {pulseMetrics.closedIssues}
+        </MetricCard>
+        <MetricCard icon={CircleDot} title="Resolved Issues">
+          {pulseMetrics.resolvedIssues}
+        </MetricCard>
+        <MetricCard icon={Users} title="Active Contributors">
+          {pulseMetrics.activeContributors}
+        </MetricCard>
+        <MetricCard icon={Tags} title="Release Frequency">
+          {releaseInfo.frequency}
+        </MetricCard>
+        <MetricCard icon={Tags} title="Last Release">
+          {releaseInfo.lastRelease}
         </MetricCard>
 
-        <MetricCard
-          icon={GitPullRequest}
-          title="Median Response Time"
-        >
-          N/A
+        {/* <MetricCard icon={GitPullRequest} title="Median Response Time">
+          {pulseMetrics.medianResponseTime}
         </MetricCard>
-        <MetricCard
-          icon={GitPullRequest}
-          title="Median Review Time"
-        >
-          N/A
+        <MetricCard icon={GitPullRequest} title="Median Review Time">
+          {pulseMetrics.medianReviewTime}
         </MetricCard>
-        <MetricCard
-          icon={GitPullRequest}
-          title="Median Close Time"
-        >
-          N/A
-        </MetricCard>
+        <MetricCard icon={GitPullRequest} title="Median Close Time">
+          {pulseMetrics.medianCloseTime}
+        </MetricCard> */}
 
-        <MetricCard
-          icon={CircleDot}
-          title="Closed Issues"
-        >
-          N/A
-        </MetricCard>
-        <MetricCard
-          icon={CircleDot}
-          title="Resolved Issues"
-        >
-          N/A
-        </MetricCard>
-        <MetricCard
-          icon={GitPullRequest}
-          title="Closed PRs"
-        >
-          N/A
-        </MetricCard>
-        <MetricCard
-          icon={GitPullRequest}
-          title="Merged PRs"
-        >
-          N/A
-        </MetricCard>
-        <MetricCard
-          icon={Tags}
-          title="Last Release"
-        >
-          N/A
-        </MetricCard>
-        <MetricCard
-          icon={Tags}
-          title="Release Frequency"
-        >
-          N/A
-        </MetricCard>
       </div>
     </div>
   );
 };
 
-const Health = (props) => {
+const Health = ({ healthStatus }) => {
   return (
     <div className="flex flex-col justify-between items-center w-full gap-2">
       <div className="flex justify-between items-center w-full">
         <div className="text-2xl font-bold">Health</div>
+        <div className="text-xl font-semibold text-gray-600">Score: {healthStatus.health_score}</div>  
       </div>
       <div className="ml-2 flex items-center flex-wrap gap-3 w-full">
         <div
           className={
-            "px-1 py-0.5 border rounded-lg" + " " + (true
+            "px-1 py-0.5 border rounded-lg" + " " + (healthStatus.readme
               ? "bg-green-100 text-green-700"
               : "bg-gray-100 text-gray-700")
           }
@@ -236,34 +192,34 @@ const Health = (props) => {
         </div>
         <div
           className={
-            "px-1 py-0.5 border rounded-lg" + " " + (true
+            "px-1 py-0.5 border rounded-lg" + " " + (healthStatus.codeOfConduct
               ? "bg-green-100 text-green-700"
               : "bg-gray-100 text-gray-700")
           }
         >
-          Code Of Conduct
+          CODE OF CONDUCT
         </div>
         <div
           className={
-            "px-1 py-0.5 border rounded-lg" + " " + (true
+            "px-1 py-0.5 border rounded-lg" + " " + (healthStatus.contributing
               ? "bg-green-100 text-green-700"
               : "bg-gray-100 text-gray-700")
           }
         >
-          Contributing
+          CONTRIBUTING
         </div>
         <div
           className={
-            "px-1 py-0.5 border rounded-lg" + " " + (true
+            "px-1 py-0.5 border rounded-lg" + " " + (healthStatus.license
               ? "bg-green-100 text-green-700"
               : "bg-gray-100 text-gray-700")
           }
         >
-          License
+          LICENSE
         </div>
         <div
           className={
-            "px-1 py-0.5 border rounded-lg" + " " + (true
+            "px-1 py-0.5 border rounded-lg" + " " + (healthStatus.securityPolicy
               ? "bg-green-100 text-green-700"
               : "bg-gray-100 text-gray-700")
           }
@@ -272,7 +228,7 @@ const Health = (props) => {
         </div>
         <div
           className={
-            "px-1 py-0.5 border rounded-lg" + " " + (true
+            "px-1 py-0.5 border rounded-lg" + " " + (healthStatus.issueTemplates
               ? "bg-green-100 text-green-700"
               : "bg-gray-100 text-gray-700")
           }
@@ -281,7 +237,7 @@ const Health = (props) => {
         </div>
         <div
           className={
-            "px-1 py-0.5 border rounded-lg" + " " + (true
+            "px-1 py-0.5 border rounded-lg" + " " + (healthStatus.prTemplates
               ? "bg-green-100 text-green-700"
               : "bg-gray-100 text-gray-700")
           }
@@ -290,30 +246,52 @@ const Health = (props) => {
         </div>
         <div
           className={
-            "px-1 py-0.5 border rounded-lg" + " " + (true
+            "px-1 py-0.5 border rounded-lg" + " " + (healthStatus.contentReports
               ? "bg-green-100 text-green-700"
               : "bg-gray-100 text-gray-700")
           }
         >
           Content Reports
         </div>
+        <div
+          className={
+            "px-1 py-0.5 border rounded-lg" + " " + (healthStatus.description
+              ? "bg-green-100 text-green-700"
+              : "bg-gray-100 text-gray-700")
+          }
+        >
+          Description
+        </div>
+        <div
+          className={
+            "px-1 py-0.5 border rounded-lg" + " " + (healthStatus.documentation
+              ? "bg-green-100 text-green-700"
+              : "bg-gray-100 text-gray-700")
+          }
+        >
+          Documentation
+        </div>
       </div>
     </div>
   );
 };
 
-const Trends = (props) => {
+const Trends = ({ contributionStats, codeFrequency, timeRange }) => {
+  const [windows, window, setWindow] = timeRange;
+  contributionStats = contributionStats[window];
+  codeFrequency = codeFrequency[window];
+
   return (
     <div className="flex flex-col justify-between items-center w-full gap-2">
       <div className="flex justify-between items-center w-full">
-        <div className="text-2xl font-bold">Health</div>
+        <div className="text-2xl font-bold">Trends</div>
       </div>
       <div className="ml-2 flex items-center flex-wrap gap-3 w-full">
           {/* Contributions Histogram */}
           <div className="grow-1 rounded-xl p-2 shadow-sm hover:shadow-lg">
             <h2 className="text-lg font-semibold text-gray-700">Contributions Distribution</h2>
             <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={contributionsData}>
+              <BarChart data={contributionStats}>
                 <Tooltip cursor={{ fill: "#f3f4f6" }} />
                 <XAxis dataKey="contributor" tick={{ fontSize: 12 }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
@@ -327,7 +305,7 @@ const Trends = (props) => {
           <div className="grow-1 rounded-xl p-2 shadow-sm hover:shadow-lg">
             <h2 className="text-lg font-semibold text-gray-700">Total Lines of Code Over Time</h2>
             <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={totalLinesData}>
+              <LineChart data={codeFrequency}>
                 <Tooltip cursor={{ stroke: "#9ca3af", strokeWidth: 1 }} />
                 <XAxis dataKey="week" tick={{ fontSize: 12 }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
@@ -349,21 +327,49 @@ const Trends = (props) => {
 };
 
 // Dashboard :)
-const Dashboard = () => {
+const Dashboard = (props) => {
+  const [stats, setStats] = useState(false);
+  const windows = ["3m", "6m", "1y"];
+  const [window, setWindow] = useState("3m");
+  const timeRange = [windows, window, setWindow];
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const data = await githubCollector.collectRepositoryData(props.owner, props.repo);
+      setStats(data);
+    };
+
+
+    fetchData();
+  }, []);
+
+  if (!stats) {
+    return <Loader />;
+  }
+
+  const {
+    repoInfo,
+    pulseMetrics,
+    healthStatus,
+    contributionStats,
+    codeFrequency,
+    releaseInfo
+  } = stats;
+
   return (
     <div className="flex flex-col gap-3 justify-around items-center w-full">
       <Title
-        created=""
-        stars=""
-        forks=""
-        watching=""
+        title={`${props.owner}/${props.repo}`}
+        created={repoInfo.created}
+        stars={repoInfo.stars}
+        forks={repoInfo.forks}
+        watching={repoInfo.watching}
       />
-      <Pulse />
-      <Health />
-      <Trends />
+      <Health healthStatus={healthStatus} />
+      <Pulse pulseMetrics={pulseMetrics} releaseInfo={releaseInfo} timeRange={timeRange} />
+      <Trends contributionStats={contributionStats} codeFrequency={codeFrequency} timeRange={timeRange} />
     </div>
   );
 };
-
 
 export default Dashboard;

@@ -6,7 +6,7 @@ import Dashboard from "./Dashboard.jsx";
 function Content(props) {
   let [owner, setOwner] = useState("");
   let [repo, setRepo] = useState("");
-  let [page, setPage] = useState("Dashboard");
+  let [page, setPage] = useState("Landing");
 
   const letsGo = (owner, repo) => {
     setOwner(owner);
@@ -15,7 +15,7 @@ function Content(props) {
   }
 
   return (
-    <div className="grow-1 p-3">
+    <div className="grow-1 p-3 flex flex-col justify-center items-center">
       {page == "Landing" && <Landing callback={letsGo} />}
       {page == "Dashboard" && <Dashboard owner={owner} repo={repo} />}
     </div>
