@@ -129,7 +129,7 @@ export default function Landing(props) {
 
         {/* Search button */}
         <button
-          className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-5 rounded-r-lg"
+          className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-3 px-5 rounded-r-lg"
           type="submit"
         >
           <svg

@@ -31,6 +31,12 @@ class GithubDataCollector {
       let response = await this.rateLimitedFetch(`${BASE_URL}${endpoint}`);
 
       if (!response.ok) {
+        if (
+          response.status === 422 &&
+          endpoint.includes("/stats/code_frequency")
+        ) {
+          return { unprocessable: true };
+        }
         const errorBody = await response.text();
         console.error(
           `HTTP error! status: ${response.status} for endpoint: ${endpoint}`
@@ -302,6 +308,9 @@ class GithubDataCollector {
     const frequency = await this.fetchGitHub(
       `/repos/${owner}/${repo}/stats/code_frequency`
     );
+    if (frequency && frequency.unprocessable) {
+      return { "3m": [], "6m": [], "1y": [], unprocessable: true };
+    }
     if (!frequency || !Array.isArray(frequency) || frequency.length === 0) {
       return { "3m": [], "6m": [], "1y": [] };
     }

@@ -13,7 +13,8 @@ import {
 export const Trends = ({ contributionDistribution, topContributors, codeFrequency }) => {
   const windows = ["3m", "6m", "1y"];
   const [window, setWindow] = useState("3m");
-  codeFrequency = codeFrequency[window];
+  const showCodeFrequency = !codeFrequency.unprocessable;
+  const codeFrequencyForWindow = codeFrequency[window];
 
   return (
     <div className="flex flex-col justify-between items-center w-full gap-2">
@@ -40,22 +41,6 @@ export const Trends = ({ contributionDistribution, topContributors, codeFrequenc
             </div>
           </div>
         </div>
-      </div>
-      <div className="ml-2 flex items-center flex-wrap gap-3 w-full">
-         {/* Additions and Deletions */}
-          <div className="grow rounded-xl p-2 shadow-sm hover:shadow-lg">
-            <h2 className="text-lg font-semibold text-gray-700">Code Frequency</h2>
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={codeFrequency}>
-                <Tooltip cursor={{ fill: "#f3f4f6" }} />
-                <XAxis dataKey="week" tick={{ fontSize: 12 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <Bar dataKey="additions" fill="#22c55e" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="deletions" fill="#ef4444" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
       </div>
       <div className="ml-2 flex items-center flex-wrap gap-3 w-full">
           {/* Contributions Histogram */}
@@ -85,8 +70,32 @@ export const Trends = ({ contributionDistribution, topContributors, codeFrequenc
               </BarChart>
             </ResponsiveContainer>
           </div>
-
-      </div>
+        </div>
+        <div className="ml-2 flex items-center flex-wrap gap-3 w-full">
+         {/* Additions and Deletions */}
+         {showCodeFrequency ? (
+          <div className="grow rounded-xl p-2 shadow-sm hover:shadow-lg">
+            <h2 className="text-lg font-semibold text-gray-700">Code Frequency</h2>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={codeFrequencyForWindow}>
+                <Tooltip cursor={{ fill: "#f3f4f6" }} />
+                <XAxis dataKey="week" tick={{ fontSize: 12 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <Bar dataKey="additions" fill="#22c55e" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="deletions" fill="#ef4444" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+         ) : (
+          <div className="grow rounded-xl p-2 shadow-sm hover:shadow-lg flex justify-center items-center h-[400px]">
+            <div className="text-center">
+              <h2 className="text-lg font-semibold text-gray-700 mb-2">Code Frequency</h2>
+              <p className="text-gray-500">Github be like: "yo, keep it under 10k commits or we’re out."</p>
+            </div>
+          </div>
+         )}
+       </div>
     </div>
   );
 };
