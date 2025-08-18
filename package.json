@@ -1,5 +1,5 @@
 {
-  "name": "contributorcompass",
+  "name": "oscompass",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.11",
-    "axios": "^1.11.0",
     "lucide-react": "^0.539.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
@@ -31,8 +30,5 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.11",
     "vite": "^7.1.0"
-  },
-  "overrides": {
-    "react-is": "^19.0.0-beta-935180c7e0-20240524"
   }
 }

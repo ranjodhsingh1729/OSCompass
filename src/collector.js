@@ -1,5 +1,5 @@
 // Base URL for the server
-const BASE_URL = "http://localhost:3000";
+const BASE_URL = "https://api.github.com";
 
 class GithubDataCollector {
   constructor() {

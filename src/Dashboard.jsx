@@ -10,22 +10,39 @@ import { Trends } from "./Trends.jsx";
 
 // Dashboard :)
 const Dashboard = (props) => {
-  const [stats, setStats] = useState(false);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      const data = await githubCollector.collectRepositoryData(
-        props.owner,
-        props.repo
-      );
-      setStats(data);
+      try {
+        setLoading(true);
+        const data = await githubCollector.collectRepositoryData(
+          props.owner,
+          props.repo
+        );
+        setStats(data);
+      } catch (err) {
+        setError(err);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchData();
-  }, []);
+  }, [props.owner, props.repo]);
+
+  if (loading) {
+    return <Loader />;
+  }
+
+  if (error) {
+    return <div className="text-red-500">An error occurred: {error.message}</div>;
+  }
 
   if (!stats) {
-    return <Loader />;
+    return <div>No data available.</div>;
   }
 
   const {
