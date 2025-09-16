@@ -5,7 +5,10 @@ class GithubDataCollector {
   constructor() {
     this.cache = new Map();
     this.lastRequestTime = 0;
-    this.RATE_LIMIT_DELAY = 3000; // 3 seconds
+    this.RATE_LIMIT_DELAY = 10000; // 10 seconds
+    this.stats_retry_count = 0;
+    this.max_stats_retry_count = 10;
+    this.STATS_RETRY_DELAY = 10000; // 10 seconds
   }
 
   async rateLimitedFetch(url) {
@@ -29,6 +32,19 @@ class GithubDataCollector {
 
     try {
       let response = await this.rateLimitedFetch(`${BASE_URL}${endpoint}`);
+
+      // If stats are being computed (202 Accepted), wait and retry.
+      if (
+        this.stats_retry_count < this.max_stats_retry_count &&
+        response.status === 202 &&
+        endpoint.includes("/stats/")
+      ) {
+        this.stats_retry_count += 1;
+        await new Promise((resolve) =>
+          setTimeout(resolve, this.STATS_RETRY_DELAY)
+        );
+        response = await this.rateLimitedFetch(`${"https://api.github.com"}${endpoint}`);
+      }
 
       if (!response.ok) {
         if (
